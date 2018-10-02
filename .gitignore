@@ -1,0 +1,15 @@
+/src/baidusecet.py
+/cscope.files
+/cscope.in.out
+/cscope.out
+/cscope.po.out
+/filenametags
+/fullfilenametags
+/tags
+/.gitignore
+
+*.swp
+*.pyc
+
+**/keil/bin/
+**/atollic_gcc/bin/
