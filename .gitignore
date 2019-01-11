@@ -8,6 +8,9 @@
 /tags
 /.gitignore
 
+*.wav
+*.mp3
+*.lrc
 *.swp
 *.pyc
 

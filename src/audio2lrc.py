@@ -49,7 +49,9 @@ def sec2LrcTime(t):
 
     return minsec
 
+#原始PCM的录音参数必须符合8k/16k采样率、16bit 位深、单声道
 bitrate = 16000
+record = record.set_sample_width(2)
 record = record.set_frame_rate(bitrate).set_channels(1)
 #chunks = split_on_silence(record, min_silence_len=300, silence_thresh=-45)
 #chunks = split_on_silence(record, min_silence_len=250, silence_thresh=-40, seek_step=1)
@@ -60,32 +62,33 @@ seek_step=10
 
 chunks = split_on_silence(record, min_silence_len=min_silence_len, silence_thresh=silence_thresh, seek_step=seek_step)
 
-new_chunks = []
-max_len = 5000
+splited_chunks = []
+max_len = 10000
 for i, chunk in enumerate(chunks):
     if (len(chunk) < max_len):
-        new_chunks.append(chunk)
+        splited_chunks.append(chunk)
     else:
         min_silence_len=40
         silence_thresh=-20
         seek_step=1
         mini_chunks = split_on_silence(chunk, min_silence_len=min_silence_len, silence_thresh=silence_thresh, seek_step=seek_step)
-        new_chunks.extend(mini_chunks)
+        splited_chunks.extend(mini_chunks)
 
-chunks = []
-if (len(new_chunks) > 0):
-    tc = new_chunks[0]
-    for i, c in enumerate(new_chunks):
-        if (len(tc) > 3000 or len(tc + c) > 5000):
-            chunks.append(tc)
+combined_chunks = []
+if (len(splited_chunks) > 0):
+    tc = splited_chunks[0]
+    for i, c in enumerate(splited_chunks[1:]):
+        if (len(tc) > 8000 or len(tc + c) > 20000):
+            combined_chunks.append(tc)
             tc = c
         else:
             tc += c
+    combined_chunks.append(tc)
 
-    chunks.append(tc)
 
-#for i, c in enumerate(chunks):
-    #print(len(c))
+for i, c in enumerate(combined_chunks):
+    print(len(c))
+
 #sys.exit()
 
 lrcFile = codecs.open(fileBaseName + ".lrc", 'w', 'utf-8')
@@ -93,12 +96,13 @@ lrcFile.write(('[ti:' + fileBaseName + "]\n").decode('utf-8'))
 total_sec = 0
 
 def write_chunk(chunk):
-    ofn = "tmpchunk{0}_{1}.wav".format(total_sec).format(len(chunk));
+    ofn = "tmpchunk{0}_{1}.wav".format(total_sec, len(chunk))
     chunk.export(ofn, format="wav") #chunk.export(sio, format="s16le")
     #sio = StringIO.StringIO()
     #sio.getvalue()   #Raw PCM
 
-for i, chunk in enumerate(chunks):
+for i, chunk in enumerate(combined_chunks):
+    #write_chunk(chunk)
     lrc = sec2LrcTime(total_sec)
     result = aipSpeech.asr(chunk.raw_data, 'pcm', bitrate, {'lan': 'zh'})
     if result and result['err_no'] == 0:
@@ -106,7 +110,7 @@ for i, chunk in enumerate(chunks):
         #print(lrc)
         lrcFile.write(lrc.decode('utf-8'))
     else:
-        print("aipSpeech.asr error at:", i, chunk)
+        print("aipSpeech.asr error at:", i, chunk, "err_no:", result['err_no'])
         #pass
     total_sec += chunk.frame_count() / chunk.frame_rate
     #print(total_sec)
